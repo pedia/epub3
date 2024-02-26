@@ -19,3 +19,4 @@ dependencies:
 dev_dependencies:
   test: ^1.25.2
   lints: ^3.0.0
+  http: ^1.2.0
