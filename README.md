@@ -2,7 +2,7 @@
 
 [epubrs](https://github.com/pedia/epubrs) is an implement of [epub reading systems](https://www.w3.org/TR/epub-rs/).
 
-Support epub2: 2.0 2.0.1 epub3: 3.0 3.0.1 3.2, reader and writer(not finished).
+Support epub2: 2.0 2.0.1 epub3: 3.0 3.0.1 3.2. Reader is fully tested, and writer is not finished yet.
 
 ## Example with dart:io
 ```dart
