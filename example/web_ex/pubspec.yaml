@@ -1,0 +1,16 @@
+name: web_ex
+description: An absolute bare-bones web app.
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  http:
+  epubrs:
+    path: ../..
+  archive:
+
+dev_dependencies:
+  build_runner:
+  build_web_compilers:
+  pedantic:
