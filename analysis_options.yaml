@@ -1,15 +1,9 @@
-# Defines a default set of lint rules enforced for
-# projects at Google. For details and rationale,
-# see https://github.com/dart-lang/pedantic#enabled-lints.
-include: package:pedantic/analysis_options.yaml
+include: package:lints/recommended.yaml
 
-# For lint rules and documentation, see http://dart-lang.github.io/linter/lints.
-# Uncomment to specify additional rules.
-# linter:
-#   rules:
-#     - camel_case_types
-
-# analyzer:
-#   exclude:
-#     - example/**
-#     - test/**
+linter:
+  rules:
+    avoid_shadowing_type_parameters: false
+    await_only_futures: true
+    use_string_in_part_of_directives: false # https://dart.dev/tools/linter-rules/use_string_in_part_of_directives
+    hash_and_equals: false
+    todo: ignore

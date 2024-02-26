@@ -1,6 +1,8 @@
 library epubrs;
 
 import 'dart:convert';
+// ignore: unused_import
+import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:collection/collection.dart' show IterableExtension;
