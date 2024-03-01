@@ -1,7 +1,7 @@
 name: epubrs
 description: EPUB Reading Systems
 homepage: https://github.com/pedia/epubrs
-version: 0.0.1
+version: 0.0.3
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -15,8 +15,19 @@ dependencies:
   quiver: ^3.2.1
   xml: ^6.5.0
 
-
 dev_dependencies:
   test: ^1.25.2
   lints: ^3.0.0
   http: ^1.2.0
+
+platforms:
+  android:
+  ios:
+  linux:
+  macos:
+  web:
+  windows:
+
+topics:
+  - epub
+  - book
