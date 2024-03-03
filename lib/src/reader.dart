@@ -1,7 +1,7 @@
 part of epubrs;
 
 /// [Reader] read scheme and content from epub file.
-class Reader {
+class Reader extends ContentReader {
   factory Reader.open(Archive archive) {
     final rootFile = readRootFile(archive);
     return Reader(archive, rootFile!);
@@ -15,7 +15,7 @@ class Reader {
   Reader(this.archive, this.rootFile);
 
   static const opfNS = 'http://www.idpf.org/2007/opf';
-  static const root = 'META-INF/container.xml';
+  static const container = 'META-INF/container.xml';
 
   Book? read() {
     final scheme = readSchema(rootFile);
@@ -27,7 +27,7 @@ class Reader {
     final nav = scheme.version == Version.epub2
         ? readNavigation2(navfile)
         : readNavigation3(navfile);
-    return Book(scheme, nav ?? Navigation(chapters: []));
+    return Book(scheme, nav ?? Navigation(chapters: []), this);
   }
 
   String pathOf(String fp) => p.join(p.dirname(rootFile), fp);
@@ -41,18 +41,17 @@ class Reader {
   ///   </rootfiles>
   /// </container>
   static String? readRootFile(Archive archive) {
-    final container =
-        archive.files.firstWhereOrNull((ArchiveFile file) => file.name == root);
-    if (container != null) {
-      final doc =
-          xml.XmlDocument.parse(utf8.decode(container.content)).rootElement;
+    final af = archive.files
+        .firstWhereOrNull((ArchiveFile file) => file.name == container);
+    if (af != null) {
+      final doc = xml.XmlDocument.parse(utf8.decode(af.content)).rootElement;
       return _findNodeAttr(doc, '/container/rootfiles/rootfile', 'full-path');
     }
     return null;
   }
 
-  /// Read [Scheme] from OEBPS/content.opf
-  Scheme? readSchema(String path) {
+  /// Read [Manifest] from OEBPS/content.opf
+  Manifest? readSchema(String path) {
     // root element, <package>
     var doc = _readAsXml(path);
     if (doc == null) return null;
@@ -68,11 +67,11 @@ class Reader {
       throw Exception('Unsupported EPUB version: $vs.');
     }
 
-    return Scheme(
+    return Manifest(
       version: version,
       metadata: _extractMetadata(
           doc.findElements('metadata', namespace: opfNS).first, version),
-      manifest: _extractManifest(
+      items: _extractManifest(
           doc.findElements('manifest', namespace: opfNS).first),
       spine: _extractSpine(doc.findElements('spine', namespace: opfNS).first),
     );
@@ -144,17 +143,14 @@ class Reader {
     }
   }
 
-  List<ManifestItem> _extractManifest(xml.XmlElement parent) {
+  List<Item> _extractManifest(xml.XmlElement parent) {
     return parent.childElements
-        .map((e) => ManifestItem(
-              id: e.getAttribute('id'),
-              type: e.getAttribute('media-type'),
+        .map((e) => Item(
+              id: e.getAttribute('id') ?? '',
+              mediaType: e.getAttribute('media-type') ?? 'application/xhtml+xml',
               href: e.getAttribute('href'),
               mediaOverlay: e.getAttribute('media-overlay'),
-              requiredNamespace: e.getAttribute('required-namespace'),
-              requiredModules: e.getAttribute('required-modules'),
               fallback: e.getAttribute('fallback'),
-              fallbackStyle: e.getAttribute('fallback-style'),
               properties: e.getAttribute('properties'),
             ))
         .toList();
@@ -167,8 +163,10 @@ class Reader {
             .map((e) => ItemRef(
                   e.getAttribute('idref')!,
                   e.getAttribute('linear') == null
-                      ? false
-                      : bool.tryParse(e.getAttribute('linear')!) ?? false,
+                      ? null
+                      : e.getAttribute('linear') == 'no'
+                          ? false
+                          : true,
                 ))
             .toList());
   }
@@ -178,9 +176,9 @@ class Reader {
 
   List<MetaIdentifier> _extractMetaIdentifier(Iterable<xml.XmlElement> es) => es
       .map((e) => MetaIdentifier(
-            e.innerText,
+            identifier: e.innerText,
+            id: e.getAttribute('id') ?? 'pub-id',
             scheme: e.getAttribute('opf:scheme'),
-            id: e.getAttribute('id'),
           ))
       .toList();
 
@@ -239,7 +237,11 @@ class Reader {
       return _readNav2(doc);
     }
 
-    // TODO: epub:type="toc"
+    // lot
+    // page-list
+    // landmarks
+
+    // TODO: epub:type="toc" or epub:type="lot"?
     final nav = doc.findAllElements('nav').first;
     return Navigation(chapters: _readOl(nav));
   }
@@ -260,14 +262,13 @@ class Reader {
     );
   }
 
-  /// read [ArchiveFile]
-  ArchiveFile? readFile(String href) {
+  /// Read an [ArchiveFile]
+  ArchiveFile readFile(String href) {
     // file#hash
     final pos = href.indexOf('#');
     final path = pathOf(pos == -1 ? href : href.substring(0, pos));
 
-    return archive.files
-        .firstWhereOrNull((ArchiveFile file) => file.name == path);
+    return archive.files.firstWhere((ArchiveFile file) => file.name == path);
   }
 
   /// Open archive file as xml

@@ -50,7 +50,9 @@ class Metadata {
         contributor: [],
         type: [],
         format: [],
-        identifier: [],
+        identifier: [
+          MetaIdentifier(identifier: 'urn:uuid:' + Uuid().v6(), id: 'pub-id'),
+        ],
         source: [],
         language: [],
         relation: [],
@@ -63,9 +65,13 @@ class Metadata {
 
 class MetaIdentifier {
   final String identifier;
-  final String? id;
+  final String id;
   final String? scheme;
-  const MetaIdentifier(this.identifier, {this.id, this.scheme});
+  const MetaIdentifier({
+    required this.identifier,
+    required this.id,
+    this.scheme,
+  });
 
   @override
   bool operator ==(Object other) =>
@@ -95,42 +101,48 @@ class MetaDate {
   const MetaDate(this.date, {this.event});
 }
 
-/// manifest item
-class ManifestItem {
-  final String? id;
-  final String? type;
+/// Manifest Item
+class Item {
+  final String id;
   final String? href;
+  final String mediaType;
   final String? mediaOverlay;
-  final String? requiredNamespace;
-  final String? requiredModules;
   final String? fallback;
-  final String? fallbackStyle;
   final String? properties;
 
-  const ManifestItem({
-    this.id,
-    this.type,
+  const Item({
+    required this.id,
     this.href,
+    required this.mediaType,
     this.mediaOverlay,
-    this.requiredNamespace,
-    this.requiredModules,
     this.fallback,
-    this.fallbackStyle,
     this.properties,
   });
 
+  // to xml attributes for this Manifest Item
+  Map<String, String> get attributes {
+    return {
+      'id': id,
+      'href': href!,
+      'media-type': mediaType,
+      if (mediaOverlay != null) 'media-overlay': mediaOverlay!,
+      if (fallback != null) 'fallback': fallback!,
+      if (properties != null) 'properties': properties!,
+    };
+  }
+
   @override
   bool operator ==(Object other) =>
-      other is ManifestItem &&
+      other is Item &&
       other.id == id &&
-      other.type == type &&
       other.href == href &&
+      other.mediaType == mediaType &&
       other.mediaOverlay == mediaOverlay &&
-      other.requiredNamespace == requiredNamespace &&
-      other.requiredModules == requiredModules &&
       other.fallback == fallback &&
-      other.fallbackStyle == fallbackStyle &&
       other.properties == properties;
+
+  @override
+  String toString() => 'ManifestItem($id, $mediaType, $href)';
 }
 
 class Spine {
@@ -144,38 +156,48 @@ class Spine {
 /// Spine ItemRef
 class ItemRef {
   final String idref;
-  final bool linear;
+  final bool? linear;
   const ItemRef(this.idref, this.linear);
+
+  // to xml attributes for this ItemRef
+  Map<String, String> get attributes {
+    return {
+      if (linear != null) 'linear': linear! ? 'yes' : 'no',
+      'idref': idref,
+    };
+  }
 }
 
-class Scheme {
+class Manifest {
   final Version version;
   final Metadata metadata;
-  final List<ManifestItem> manifest;
+  final List<Item> items;
   final Spine spine;
   // TODO: guide
-  Scheme({
+  Manifest({
     required this.version,
     required this.metadata,
-    required this.manifest,
+    required this.items,
     required this.spine,
   });
 
+  String get identifier => metadata.identifier.first.identifier;
+
   String tocFile() {
-    ManifestItem? entry;
+    Item? entry;
     if (version == Version.epub2) {
-      entry = manifest.where((element) => element.id == spine.toc).firstOrNull;
+      entry = items.where((element) => element.id == spine.toc).firstOrNull;
     } else if (version == Version.epub3) {
       // TODO: this is better?
       // id="nav" first
       // properties="nav" second
-      entry = manifest
+      entry = items
           .where((i) => i.id == 'ncx' || i.properties == 'nav')
           .firstOrNull;
       // entry ??= manifest.where((i) => i.properties == 'nav').firstOrNull;
 
       if (entry == null) {
-        for (var i in manifest) {
+        for (var i in items) {
           print(i);
         }
       }
@@ -188,6 +210,7 @@ class Chapter {
   final String title;
   final String? href;
   final List<Chapter> children;
+  final String? content;
 
   int get chapterCount => children.fold<int>(
         children.length,
@@ -197,8 +220,42 @@ class Chapter {
   const Chapter({
     required this.title,
     this.href,
-    required this.children,
+    this.children = const [],
+    this.content,
   });
+
+  factory Chapter.content(String title, String content) {
+    return Chapter(title: title, content: content);
+  }
+
+  /// Generate a manifest item if [Chapter] has content
+  Item? get item {
+    // TODO:
+    if (content == null) {
+      return null;
+    }
+
+    // convert title to default href
+    final fn = href ?? '${title.replaceAll(' ', '-')}.html';
+    return Item(
+      id: 'h' + Object.hash(title, href).toRadixString(16),
+      href: fn,
+      mediaType: 'application/xhtml+xml',
+    );
+  }
+
+  List<Item> get items {
+    final cs = <Item>[];
+    final i = item;
+    if (i != null) {
+      cs.add(i);
+    }
+
+    for (var c in children) {
+      cs.addAll(c.items);
+    }
+    return cs;
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -228,46 +285,72 @@ class Navigation {
       );
 }
 
-class Book {
-  final Scheme scheme;
-  final Navigation navigation;
-  Book(this.scheme, this.navigation);
+abstract class ContentReader {
+  ArchiveFile readFile(String path);
+}
 
-  factory Book.create(String title, String author) {
+class Book {
+  final Manifest manifest;
+  final Navigation navigation;
+  final ContentReader? reader;
+  Book(this.manifest, this.navigation, this.reader);
+
+  factory Book.create(
+      {required String title, required String author, ContentReader? reader}) {
     return Book(
-      Scheme(
+      Manifest(
         version: Version.epub3,
         metadata: Metadata.create(title, author),
-        manifest: [],
+        items: [],
         spine: Spine.empty(),
       ),
       Navigation(title: title, author: author, chapters: []),
+      reader,
     );
   }
 
-  Version get version => scheme.version;
+  void add(Chapter chapter) {
+    navigation.chapters.add(chapter);
+    manifest.items.addAll(chapter.items);
+  }
+
+  Version get version => manifest.version;
   String get title {
     if (navigation.title != null) {
       return navigation.title!;
     }
-    return scheme.metadata.title.isNotEmpty ? scheme.metadata.title[0] : '';
+    return manifest.metadata.title.isNotEmpty ? manifest.metadata.title[0] : '';
   }
 
   String get author {
     if (navigation.author != null) {
       return navigation.author!;
     }
-    return scheme.metadata.creator.isNotEmpty
-        ? scheme.metadata.creator[0].creator
+    return manifest.metadata.creator.isNotEmpty
+        ? manifest.metadata.creator[0].creator
         : '';
   }
 
   String? get cover =>
-      scheme.manifest.firstWhereOrNull((i) => i.id == 'cover')?.href;
-  String? get coverImage => scheme.manifest
+      manifest.items.firstWhereOrNull((i) => i.id == 'cover')?.href;
+  String? get coverImage => manifest.items
       .firstWhereOrNull(
           (i) => i.properties == 'cover-image' || i.id == 'cover-image')
       ?.href;
 
   List<Chapter> get chapters => navigation.chapters;
+
+  /// Navigation item
+  Item? get nav {
+    if (version == Version.epub2) {
+      return manifest.items
+          .where((element) => element.id == manifest.spine.toc)
+          .firstOrNull;
+    } else if (version == Version.epub3) {
+      return manifest.items
+          .where((i) => i.id == 'ncx' || i.properties == 'nav')
+          .firstOrNull;
+    }
+    return null;
+  }
 }

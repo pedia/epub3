@@ -13,52 +13,116 @@ class Writer {
   }
 
   /// files:
+  ///   mimetype
   ///   META-INF/container.xml
   ///   EPUB/package.opf
-  ///   EPUB/xhtml/nav.xhtml
+  ///   EPUB/nav.xhtml
   void write(Archive a) {
     a.addFile(ArchiveFile.noCompress(
         'mimetype', 20, utf8.encode('application/epub+zip')));
-    a.addFile(ArchiveFile.string(Reader.root, container));
+    a.addFile(ArchiveFile.string(Reader.container, container));
 
-    a.addFile(xmlFile('EPUB/package.opf', buildScheme(book.scheme)));
-    a.addFile(
-        xmlFile('EPUB/xhtml/nav.xhtml', buildNavigation(book.navigation)));
+    a.addFile(xmlFile(
+      'EPUB/package.opf',
+      buildManifest(book.manifest),
+    ));
+    a.addFile(xmlFile(
+      'EPUB/nav.xhtml',
+      buildNavigation(book.navigation),
+    ));
+
+    // manifest to archive?
+    // chapters to archive?
+    final fnset = Set<String>();
+    for (var ch in book.chapters) {
+      writeChapter(a, ch, fnset);
+    }
   }
 
-  xml.XmlBuilder buildScheme(Scheme scheme) {
+  writeChapter(Archive ar, Chapter ch, Set<String> fnset) {
+    if (ch.content != null) {
+      final fn = ch.item?.href;
+      if (fn != null && !fnset.contains(fn)) {
+        ar.addFile(ArchiveFile.string('EPUB/$fn', chapterToHtml(ch)));
+        fnset.add(fn);
+      }
+    }
+
+    for (var sub in ch.children) {
+      writeChapter(ar, sub, fnset);
+    }
+  }
+
+  xml.XmlBuilder buildManifest(Manifest manifest) {
     final out = xml.XmlBuilder();
     out.processing('xml', 'version="1.0"');
+
+    final uid = manifest.metadata.identifier.first.id;
     out.element(
       'package',
       namespaces: {Reader.opfNS: null},
-      attributes: {
-        'version': '3.0',
-        'unique-identifier': 'etextno',
-      },
+      attributes: {'version': '3.0', 'unique-identifier': uid}, // [1]
       nest: () {
         const dcuri = 'http://purl.org/dc/elements/1.1/';
         out.element('metadata', nest: () {
           out.namespace(dcuri, 'dc');
+          out.element(
+            'identifier',
+            namespace: dcuri,
+            attributes: {'id': uid}, // same id as [1]
+            nest: manifest.metadata.identifier.first.identifier,
+          );
           out.element('title', namespace: dcuri, nest: book.title);
-          // <dc:language>en</dc:language>
-          out.element('language', namespace: dcuri, nest: 'en'); // TODO:
+          out.element('language', namespace: dcuri, nest: 'en');
+          out.element('creator', namespace: dcuri, nest: 'epubrs in dart');
+
           // <meta property="dcterms:modified">2012-02-27T16:38:35Z</meta>
+          final now = DateTime.now().toUtc();
+          out.element(
+            'meta',
+            attributes: {'property': 'dcterms:modified'},
+            nest: now.toIsoString(), // CCYY-MM-DDThh:mm:ssZ
+          );
         });
 
         out.element('manifest', nest: () {
           out.element('item', attributes: {
-            'href': 'xhtml/nav.xhtml',
             'id': 'nav',
+            'href': 'nav.xhtml',
             'media-type': 'application/xhtml+xml',
             'properties': 'nav',
           });
+
+          for (var i in manifest.items) {
+            out.element('item', attributes: i.attributes);
+          }
         });
 
-        out.element('spine', nest: () {});
+        out.element('spine', // attributes: {'toc': manifest.spine.toc},
+            nest: () {
+          for (var i in manifest.spine.refs) {
+            out.element('itemref', attributes: i.attributes);
+          }
+          out.element('itemref', attributes: {'idref': 'nav'});
+
+          for (var ch in book.chapters) {
+            buildShpineItem(out, ch);
+          }
+        });
       },
     );
     return out;
+  }
+
+  void buildShpineItem(xml.XmlBuilder out, Chapter ch) {
+    final i = ch.item;
+    if (i != null) {
+      out.element('itemref', attributes: {'idref': i.id});
+    }
+
+    for (var c in ch.children){
+      buildShpineItem(out, c);
+    }
   }
 
   xml.XmlBuilder buildNavigation(Navigation nav) {
@@ -70,16 +134,9 @@ class Writer {
     }, nest: () {
       out.element('head', nest: () {
         out.element('meta', attributes: {'charset': 'utf-8'});
-        // TODO: title, css
+        out.element('title', nest: book.title);
       });
       out.element('body', nest: () {
-        if (nav.title != null) {
-          out.element('docTitle', nest: () {
-            out.element('text', nest: nav.title);
-          });
-        }
-
-        //
         out.element('nav', attributes: {'epub:type': 'toc', 'id': 'toc'},
             nest: () {
           // <h1 class="title">Table of Contents</h1>
@@ -103,13 +160,15 @@ class Writer {
   }
 
   void buildChapter(xml.XmlBuilder out, Chapter chapter) {
+    // TODO: <li id="?">
     out.element('li', nest: () {
-      if (chapter.href != null) {
-        out.element('a', attributes: {'href': chapter.href!}, nest: () {
+      final i = chapter.item;
+      if (i == null) {
+        out.element('span', nest: chapter.title);
+      } else {
+        out.element('a', attributes: {'href': i.href!}, nest: () {
           out.text(chapter.title);
         });
-      } else {
-        out.element('span', nest: chapter.title);
       }
 
       if (chapter.children.isNotEmpty) {
@@ -134,4 +193,20 @@ class Writer {
       <rootfile full-path="EPUB/package.opf" media-type="application/oebps-package+xml"/>
    </rootfiles>
 </container>''';
+
+  static String chapterToHtml(Chapter ch) {
+    final content =
+        ch.content?.split('\n').map((line) => '<p>$line</p>').join('\n');
+
+    return '''<?xml version="1.0" encoding="utf-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8"/>
+<title>${ch.title}</title></head>
+<body>
+$content
+</body>
+</html>
+''';
+  }
 }

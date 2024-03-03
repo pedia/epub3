@@ -48,51 +48,58 @@ void main() {
     final book = r.read();
     expect(book!.version, Version.epub2);
     expect(
-        book.scheme.metadata.title, equals(['Test title 1', 'Test title 2']));
+        book.manifest.metadata.title, equals(['Test title 1', 'Test title 2']));
     expect(
       MetaCreator('John Doe', fileAs: 'Doe, John', role: 'author') ==
           MetaCreator('John Doe', fileAs: 'Doe, John', role: 'author'),
       isTrue,
     );
     expect(
-        book.scheme.metadata.creator,
+        book.manifest.metadata.creator,
         equals([
           MetaCreator('John Doe', fileAs: 'Doe, John', role: 'author'),
           MetaCreator('Jane Doe', fileAs: 'Doe, Jane', role: 'author'),
         ]));
     expect(
-        book.scheme.metadata.contributor,
+        book.manifest.metadata.contributor,
         equals([
           MetaCreator('John Editor', fileAs: 'Editor, John', role: 'editor'),
           MetaCreator('Jane Editor', fileAs: 'Editor, Jane', role: 'editor'),
         ]));
     expect(
-        book.scheme.metadata.identifier,
+        book.manifest.metadata.identifier,
         equals([
-          MetaIdentifier('https://example.com/books/123',
-              id: 'identifier-1', scheme: 'URI'),
-          MetaIdentifier('9781234567890', id: 'identifier-2', scheme: 'ISBN'),
+          MetaIdentifier(
+            identifier: 'https://example.com/books/123',
+            id: 'identifier-1',
+            scheme: 'URI',
+          ),
+          MetaIdentifier(
+            identifier: '9781234567890',
+            id: 'identifier-2',
+            scheme: 'ISBN',
+          ),
         ]));
-    expect(book.scheme.metadata.subject,
+    expect(book.manifest.metadata.subject,
         equals(['Test subject 1', 'Test subject 2']));
-    expect(book.scheme.metadata.publisher,
+    expect(book.manifest.metadata.publisher,
         equals(['Test publisher 1', 'Test publisher 2']));
-    expect(book.scheme.metadata.description, equals(['Test description']));
-    expect(book.scheme.metadata.type, equals(['dictionary', 'preview']));
-    expect(book.scheme.metadata.format, equals(['format-1', 'format-2']));
+    expect(book.manifest.metadata.description, equals(['Test description']));
+    expect(book.manifest.metadata.type, equals(['dictionary', 'preview']));
+    expect(book.manifest.metadata.format, equals(['format-1', 'format-2']));
     expect(
-        book.scheme.metadata.source,
+        book.manifest.metadata.source,
         equals([
           'https://example.com/books/123/content-1.html',
           'https://example.com/books/123/content-2.html',
         ]));
 
-    expect(book.scheme.manifest.length, 14);
+    expect(book.manifest.items.length, 14);
     expect(
-      book.scheme.manifest[0],
-      equals(ManifestItem(
+      book.manifest.items[0],
+      equals(Item(
         id: 'item-front',
-        type: 'application/xhtml+xml',
+        mediaType: 'application/xhtml+xml',
         href: 'front.html',
       )),
     );
@@ -112,59 +119,66 @@ void main() {
         ])));
 
     final cover = r.readFile(book.cover!);
-    expect(cover!.content.length, 116);
+    expect(cover.content.length, 116);
     final coverImage = r.readFile(book.coverImage!);
-    expect(coverImage!.content.length, 610);
+    expect(coverImage.content.length, 610);
   });
 
   test('epub3', () {
     final book = readFile('test/res/epub3.epub');
     expect(book!.version, Version.epub3);
     expect(
-        book.scheme.metadata.title, equals(['Test title 1', 'Test title 2']));
+        book.manifest.metadata.title, equals(['Test title 1', 'Test title 2']));
     expect(
       MetaCreator('John Doe', fileAs: 'Doe, John', role: 'author'),
       MetaCreator('John Doe', fileAs: 'Doe, John', role: 'author'),
     );
     expect(
-        book.scheme.metadata.creator,
+        book.manifest.metadata.creator,
         equals([
           MetaCreator('John Doe', fileAs: 'Doe, John', role: 'author'),
           MetaCreator('Jane Doe', fileAs: 'Doe, Jane', role: 'author'),
         ]));
     expect(
-        book.scheme.metadata.contributor,
+        book.manifest.metadata.contributor,
         equals([
           MetaCreator('John Editor', fileAs: 'Editor, John', role: 'editor'),
           MetaCreator('Jane Editor', fileAs: 'Editor, Jane', role: 'editor'),
         ]));
     expect(
-        book.scheme.metadata.identifier,
+        book.manifest.metadata.identifier,
         equals([
-          MetaIdentifier('https://example.com/books/123',
-              id: 'identifier-1', scheme: 'URI'),
-          MetaIdentifier('9781234567890', id: 'identifier-2', scheme: 'ISBN'),
+          MetaIdentifier(
+            identifier: 'https://example.com/books/123',
+            id: 'identifier-1',
+            scheme: 'URI',
+          ),
+          MetaIdentifier(
+            identifier: '9781234567890',
+            id: 'identifier-2',
+            scheme: 'ISBN',
+          ),
         ]));
-    expect(book.scheme.metadata.subject,
+    expect(book.manifest.metadata.subject,
         equals(['Test subject 1', 'Test subject 2']));
-    expect(book.scheme.metadata.publisher,
+    expect(book.manifest.metadata.publisher,
         equals(['Test publisher 1', 'Test publisher 2']));
-    expect(book.scheme.metadata.description, equals(['Test description']));
-    expect(book.scheme.metadata.type, equals(['dictionary', 'preview']));
-    expect(book.scheme.metadata.format, equals(['format-1', 'format-2']));
+    expect(book.manifest.metadata.description, equals(['Test description']));
+    expect(book.manifest.metadata.type, equals(['dictionary', 'preview']));
+    expect(book.manifest.metadata.format, equals(['format-1', 'format-2']));
     expect(
-        book.scheme.metadata.source,
+        book.manifest.metadata.source,
         equals([
           'https://example.com/books/123/content-1.html',
           'https://example.com/books/123/content-2.html',
         ]));
 
-    expect(book.scheme.manifest.length, 17);
+    expect(book.manifest.items.length, 17);
     expect(
-      book.scheme.manifest[0],
-      equals(ManifestItem(
+      book.manifest.items[0],
+      equals(Item(
         id: 'item-front',
-        type: 'application/xhtml+xml',
+        mediaType: 'application/xhtml+xml',
         href: 'front.html',
       )),
     );
@@ -198,8 +212,8 @@ void main() {
   test('std-read', () {
     for (var f in fs) {
       print('epub: $f');
-      final book = readFile(f);
-      expect(book!.scheme, isNotNull);
+      final book = readFile(f)!;
+      expect(book.manifest, isNotNull);
 
       print(' title: ${book.title} ${book.version}');
       print(' author: ${book.author}');
@@ -213,8 +227,8 @@ void main() {
   test('malformed', () {
     csharput.forEach((f) {
       print('epub: $f');
-      final book = readFile(f);
-      expect(book!.scheme, isNotNull);
+      final book = readFile(f)!;
+      expect(book.manifest, isNotNull);
       // expect(book.catalog.title, isNotEmpty);
       print(' ver: ${book.version}');
       print(' title: ${book.title}');
