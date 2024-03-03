@@ -1,2 +1,5 @@
 test/res
 example
+epubcheck-5.1.0
+*.epub
+t
