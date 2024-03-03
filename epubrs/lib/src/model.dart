@@ -51,7 +51,7 @@ class Metadata {
         type: [],
         format: [],
         identifier: [
-          MetaIdentifier(identifier: 'urn:uuid:' + Uuid().v6(), id: 'pub-id'),
+          MetaIdentifier(identifier: 'urn:uuid:' + Uuid().v4(), id: 'pub-id'),
         ],
         source: [],
         language: [],
