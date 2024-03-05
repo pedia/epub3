@@ -1,4 +1,4 @@
-part of epubrs;
+part of epub3;
 
 /// [Reader] read scheme and content from epub file.
 class Reader extends ContentReader {

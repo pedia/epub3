@@ -1,4 +1,4 @@
-part of epubrs;
+part of epub3;
 
 /// epub2 2.0 2.0.1
 /// epub3 3.0 3.0.1 3.2

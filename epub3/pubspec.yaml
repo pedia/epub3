@@ -1,7 +1,7 @@
-name: epubrs
-description: EPUB Reading Systems
-homepage: https://github.com/pedia/epubrs
-version: 0.1.1
+name: epub3
+description: EPUB3 Read and Write. EPUB Reading Systems
+homepage: https://github.com/pedia/epub3
+version: 0.2.0
 
 environment:
   sdk: '>=2.14.0 <4.0.0'

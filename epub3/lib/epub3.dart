@@ -1,4 +1,4 @@
-library epubrs;
+library epub3;
 
 import 'dart:convert';
 // ignore: unused_import

@@ -1,4 +1,4 @@
-import 'package:epubrs/epubrs_io.dart';
+import 'package:epub3/epub3_io.dart';
 import 'package:test/test.dart';
 import 'package:archive/archive.dart';
 

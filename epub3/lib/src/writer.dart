@@ -1,4 +1,4 @@
-part of epubrs;
+part of epub3;
 
 ///
 class Writer {

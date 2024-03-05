@@ -1,4 +1,4 @@
-library epubrs;
+library epub3;
 
 import 'dart:convert';
 import 'dart:io';

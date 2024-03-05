@@ -1,4 +1,4 @@
-import 'package:epubrs/epubrs_io.dart' as epub;
+import 'package:epub3/epub3_io.dart' as epub;
 // import 'package:image/image.dart';
 
 void dumpChapter(epub.Chapter c, {int depth = 1}) {
