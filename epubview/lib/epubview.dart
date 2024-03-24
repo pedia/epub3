@@ -2,6 +2,9 @@ library epubview;
 
 import 'package:flutter/material.dart';
 import 'package:epub3/epub3_io.dart' as epub;
+import 'package:html2md/html2md.dart' as html2md;
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:markdown/markdown.dart' as md;
 
 /// A Calculator.
 class Calculator {
@@ -61,6 +64,9 @@ class ChapterView extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       itemBuilder: (context, index) {
+        // print(
+        //     'tile font: ${Theme.of(context).textTheme.bodyMedium?.fontFamily} '
+        //     '${Theme.of(context).textTheme.bodyMedium?.fontFamilyFallback}');
         final ch = chapters[index];
         return ListTile(
           leading: ch.parent == null ? null : const Text(''),
@@ -101,9 +107,62 @@ class _ReaderViewState extends State<ReaderView> {
     if (widget.href != null) {
       final content = widget.book.readString(widget.href!);
       if (content != null) {
-        return Text(content);
+        final mdt = html2md.convert(content);
+        print(mdt);
+        final mdss = MarkdownStyleSheet.fromTheme(Theme.of(context)).merge(
+          MarkdownStyleSheet(
+            p: const TextStyle(fontSize: 16, fontFamily: 'NotoSansJP'),
+            h1: const TextStyle(fontSize: 32, fontFamily: 'NotoSansJP'),
+            h2: const TextStyle(fontSize: 28, fontFamily: 'NotoSansJP'),
+            h3: const TextStyle(fontSize: 24, fontFamily: 'NotoSansJP'),
+            h4: const TextStyle(fontSize: 18, fontFamily: 'NotoSansJP'),
+            h5: const TextStyle(fontSize: 16, fontFamily: 'NotoSansJP'),
+            h6: const TextStyle(fontSize: 14, fontFamily: 'NotoSansJP'),
+            listBullet: const TextStyle(fontSize: 16, fontFamily: 'NotoSansJP'),
+            tableHead: const TextStyle(fontSize: 16, fontFamily: 'NotoSansJP'),
+            tableBody: const TextStyle(fontSize: 16, fontFamily: 'NotoSansJP'),
+            blockquote: const TextStyle(fontSize: 16, fontFamily: 'NotoSansJP'),
+          ),
+        );
+        print(
+            'fonts: p:${mdss.p?.fontFamily} h1:${mdss.h1?.fontFamily} h4:${mdss.h4?.fontFamily} a:${mdss.a?.fontFamily}');
+        return Markdown(
+          data: mdt,
+          styleSheet: mdss,
+          selectable: true,
+          imageBuilder: buildImage,
+        );
       }
     }
-    return Text('${widget.href}');
+
+    /// test only
+    final mdt = html2md.convert('<p>幸運 こううん にも中文</p>');
+    final mdss = MarkdownStyleSheet.fromTheme(Theme.of(context));
+    // .merge(
+    //   MarkdownStyleSheet(p: const TextStyle(fontFamily: 'NotoSansJP')),
+    // );
+    return Markdown(
+      data: mdt,
+      styleSheet: mdss,
+      selectable: true,
+      imageBuilder: buildImage,
+    );
+
+    // return Text('${widget.href}');
+  }
+
+  /// TODO: title, alt
+  Widget buildImage(Uri uri, String? title, String? alt) {
+    final bs = widget.book.readBytes(uri.toString());
+    if (bs != null) {
+      return Image(image: MemoryImage(bs));
+    }
+    return const SizedBox(width: 100, height: 10, child: Text('not found'));
   }
 }
+
+// 幸運 こううん にも中文
+// The default font-family for Android,Fuchsia and Linux is Roboto.
+// The default font-family for iOS is SF Pro Display/SF Pro Text.
+// The default font-family for MacOS is .AppleSystemUIFont.
+// The default font-family for Windows is Segoe UI.

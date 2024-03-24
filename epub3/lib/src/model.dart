@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -369,7 +370,7 @@ class Book {
   String? readString(String href) {
     final c = reader?.readFile(pathOf(href))?.content;
     if (c != null && c is Uint8List) {
-      return String.fromCharCodes(c);
+      return utf8.decode(c);
     }
     return null;
   }
