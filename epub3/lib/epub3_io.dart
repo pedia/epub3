@@ -1,21 +1,16 @@
 library epub3;
 
-import 'dart:convert';
 import 'dart:io';
 
-import 'src/base.dart';
-
 import 'package:archive/archive_io.dart';
-import 'package:collection/collection.dart' show IterableExtension;
 import 'package:path/path.dart' as p;
-import 'package:quiver/collection.dart' show listsEqual;
-import 'package:uuid/uuid.dart';
-import 'package:xml/xml.dart' as xml;
-import 'package:xml/xpath.dart' as xml;
 
-part "src/model.dart";
-part 'src/reader.dart';
-part 'src/writer.dart';
+import "src/model.dart";
+export "src/model.dart";
+import 'src/reader.dart';
+export 'src/reader.dart';
+import 'src/writer.dart';
+export 'src/writer.dart';
 
 /// Global function for open file as epub and read content to [Book].
 /// ```dart
@@ -42,6 +37,6 @@ class LocalFileReader extends ContentReader {
 
   @override
   ArchiveFile readFile(String path) {
-    return ArchiveFile(path, 0, File(p.join(root,path)).readAsBytesSync());
+    return ArchiveFile(path, 0, File(p.join(root, path)).readAsBytesSync());
   }
 }

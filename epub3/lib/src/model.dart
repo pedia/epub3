@@ -1,4 +1,10 @@
-part of epub3;
+import 'dart:typed_data';
+
+import 'package:archive/archive.dart';
+import 'package:collection/collection.dart' show IterableExtension;
+import 'package:path/path.dart' as p;
+import 'package:quiver/collection.dart' show listsEqual;
+import 'package:uuid/uuid.dart';
 
 /// epub2 2.0 2.0.1
 /// epub3 3.0 3.0.1 3.2
@@ -286,7 +292,7 @@ class Navigation {
 }
 
 abstract class ContentReader {
-  ArchiveFile readFile(String path);
+  ArchiveFile? readFile(String path);
 }
 
 class Book {
@@ -352,5 +358,23 @@ class Book {
           .firstOrNull;
     }
     return null;
+  }
+
+  String pathOf(String href) {
+    final pos = href.indexOf('#');
+    final path = pos == -1 ? href : href.substring(0, pos);
+    return p.join(p.dirname(manifest.tocFile()), path);
+  }
+
+  String? readString(String href) {
+    final c = reader?.readFile(pathOf(href))?.content;
+    if (c != null && c is Uint8List) {
+      return String.fromCharCodes(c);
+    }
+    return null;
+  }
+
+  Uint8List? readBytes(String href) {
+    return reader?.readFile(pathOf(href))?.content;
   }
 }

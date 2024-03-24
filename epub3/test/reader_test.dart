@@ -119,9 +119,9 @@ void main() {
         ])));
 
     final cover = r.readFile(book.cover!);
-    expect(cover.content.length, 116);
+    expect(cover?.content.length, 116);
     final coverImage = r.readFile(book.coverImage!);
-    expect(coverImage.content.length, 610);
+    expect(coverImage?.content.length, 610);
   });
 
   test('epub3', () {
@@ -197,15 +197,17 @@ void main() {
         ])));
   });
 
-  void dumpChapter(Chapter c, {int depth = 1}) {
+  void dumpChapter(Book book, Chapter c, {int depth = 1}) {
     final char = '#'.codeUnits[0];
     final prefix = String.fromCharCodes(List.generate(depth, (index) => char));
     expect(c.title.contains('\n'), isFalse);
     expect(c.title.startsWith(' '), isFalse);
 
-    print('$prefix ${c.title}');
+    final contentLength = c.href != null ? book.readBytes(c.href!)?.length : 0;
+
+    print('$prefix ${c.title} $contentLength');
     for (var cc in c.children) {
-      dumpChapter(cc, depth: depth + 1);
+      dumpChapter(book, cc, depth: depth + 1);
     }
   }
 
@@ -219,7 +221,21 @@ void main() {
       print(' author: ${book.author}');
 
       for (var c in book.navigation.chapters) {
-        dumpChapter(c);
+        dumpChapter(book, c);
+      }
+
+      readit(Chapter c) {
+        if (c.href != null) {
+          final af = book.readBytes(c.href!);
+          expect(af, isNotNull);
+        }
+        for (var cc in c.children) {
+          readit(cc);
+        }
+      }
+
+      for (var c in book.chapters) {
+        readit(c);
       }
     }
   });

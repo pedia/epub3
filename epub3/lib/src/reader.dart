@@ -1,4 +1,11 @@
-part of epub3;
+import 'dart:convert';
+import 'package:archive/archive.dart';
+import 'package:collection/collection.dart' show IterableExtension;
+import 'package:path/path.dart' as p;
+import 'package:xml/xml.dart' as xml;
+import 'package:xml/xpath.dart' as xml;
+
+import 'model.dart';
 
 /// [Reader] read scheme and content from epub file.
 class Reader extends ContentReader {
@@ -147,7 +154,8 @@ class Reader extends ContentReader {
     return parent.childElements
         .map((e) => Item(
               id: e.getAttribute('id') ?? '',
-              mediaType: e.getAttribute('media-type') ?? 'application/xhtml+xml',
+              mediaType:
+                  e.getAttribute('media-type') ?? 'application/xhtml+xml',
               href: e.getAttribute('href'),
               mediaOverlay: e.getAttribute('media-overlay'),
               fallback: e.getAttribute('fallback'),
@@ -248,7 +256,9 @@ class Reader extends ContentReader {
 
   List<Chapter> _readOl(xml.XmlElement parent) {
     final ol = parent.findElements('ol').firstOrNull;
-    return ol == null ? [] : ol.findElements('li').map(_readLi).toList();
+    return ol == null
+        ? []
+        : ol.findElements('li').map((e) => _readLi(e)).toList();
   }
 
   Chapter _readLi(xml.XmlElement li) {
@@ -263,12 +273,15 @@ class Reader extends ContentReader {
   }
 
   /// Read an [ArchiveFile]
-  ArchiveFile readFile(String href) {
-    // file#hash
-    final pos = href.indexOf('#');
-    final path = pathOf(pos == -1 ? href : href.substring(0, pos));
+  ArchiveFile? readFile(String path) {
+    assert(path.indexOf('#') == -1);
 
-    return archive.files.firstWhere((ArchiveFile file) => file.name == path);
+    // pathOf for relative path
+    // normalize for avoid ./
+    path = p.normalize(pathOf(path));
+
+    return archive.files
+        .firstWhereOrNull((ArchiveFile file) => file.name == path);
   }
 
   /// Open archive file as xml

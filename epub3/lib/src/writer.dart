@@ -1,4 +1,11 @@
-part of epub3;
+import 'dart:convert';
+
+import 'package:archive/archive.dart';
+import 'package:xml/xml.dart' as xml;
+
+import 'base.dart';
+import 'model.dart';
+import 'reader.dart';
 
 ///
 class Writer {
@@ -120,7 +127,7 @@ class Writer {
       out.element('itemref', attributes: {'idref': i.id});
     }
 
-    for (var c in ch.children){
+    for (var c in ch.children) {
       buildShpineItem(out, c);
     }
   }
