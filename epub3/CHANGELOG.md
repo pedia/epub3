@@ -1,4 +1,4 @@
-# 0.2.2
+# 0.2.1
 Fix path in ContentReader.
 Add Book.readBytes, Book.readString.
 Replace `part of` to import/export.
