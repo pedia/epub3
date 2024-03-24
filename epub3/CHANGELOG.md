@@ -1,3 +1,6 @@
+# 0.2.2
+Fix utf8 decode in Book.readString
+
 # 0.2.1
 Fix path in ContentReader.
 Add Book.readBytes, Book.readString.
