@@ -7,9 +7,13 @@ import 'package:path/path.dart' as p;
 import 'package:quiver/collection.dart' show listsEqual;
 import 'package:uuid/uuid.dart';
 
-/// epub2 2.0 2.0.1
-/// epub3 3.0 3.0.1 3.2
-enum Version { epub2, epub3 }
+enum Version {
+  /// epub2 2.0 2.0.1
+  epub2,
+
+  /// epub3 3.0 3.0.1 3.2
+  epub3
+}
 
 class Metadata {
   final List<String> title;
@@ -217,7 +221,11 @@ class Chapter {
   final String title;
   final String? href;
   final List<Chapter> children;
-  final String? content;
+  /// raw content, always content of html file
+  final String? content; 
+
+  /// TODO: extract text from html document
+  String get text => '';
 
   int get chapterCount => children.fold<int>(
         children.length,
@@ -231,8 +239,29 @@ class Chapter {
     this.content,
   });
 
-  factory Chapter.content(String title, String content) {
-    return Chapter(title: title, content: content);
+  factory Chapter.textContent(String title, String text) {
+    final href = title; // TODO:
+    return Chapter(
+        title: title, href: href, content: Chapter.toHtml(title, text));
+  }
+
+// transform text to HTML
+  static String toHtml(String title, String text) {
+    final body = text
+        .split('\n')
+        .map((line) => '<p>' + HtmlEscape().convert(line.trim()) + '</p>')
+        .join('\n\n');
+
+    return '''<?xml version="1.0" encoding="utf-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8"/>
+<title>$title</title></head>
+<body>
+$body
+</body>
+</html>
+''';
   }
 
   /// Generate a manifest item if [Chapter] has content
@@ -359,6 +388,10 @@ class Book {
           .firstOrNull;
     }
     return null;
+  }
+
+  String? toHref(String id) {
+    return manifest.items.where((i) => i.id == id).firstOrNull?.href;
   }
 
   String pathOf(String href) {

@@ -1,5 +1,5 @@
 name: epub3
-description: Epub3 file Read and Write.
+description: Read and Write Epub3 files.
 homepage: https://github.com/pedia/epub3
 version: 0.2.2
 

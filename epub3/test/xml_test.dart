@@ -3,7 +3,7 @@ import 'package:collection/collection.dart' show IterableExtension;
 import 'package:test/test.dart';
 
 void main() {
-  void ensure(xml.XmlElement? e) {
+  void ensureNotNull(xml.XmlElement? e) {
     expect(e, isNotNull);
   }
 
@@ -15,14 +15,14 @@ void main() {
 
     final b0 = doc.findElements('b').first;
     expect(b0.getAttribute('c'), 'd');
-    ensure(doc.findElements('b').first);
+    ensureNotNull(doc.findElements('b').first);
 
     final es = doc.findElements('e');
     expect(es.length, 2);
 
     final e0 = doc.findElements('e').first;
     expect(e0, isNotNull);
-    ensure(doc.findElements('e').first);
+    ensureNotNull(doc.findElements('e').first);
 
     final f0 = doc.findElements('f').firstOrNull;
     expect(f0, isNull);

@@ -27,7 +27,7 @@ class Writer {
   void write(Archive a) {
     a.addFile(ArchiveFile.noCompress(
         'mimetype', 20, utf8.encode('application/epub+zip')));
-    a.addFile(ArchiveFile.string(Reader.container, container));
+    a.addFile(ArchiveFile.string(Reader.containerFN, container));
 
     a.addFile(xmlFile(
       'EPUB/package.opf',
@@ -47,10 +47,19 @@ class Writer {
   }
 
   writeChapter(Archive ar, Chapter ch, Set<String> fnset) {
-    if (ch.content != null) {
+    Chapter chapterWithContent = ch;
+    // if (ch.content == null) {
+    //   final af = book.reader?.readFile(ch.href!);
+    //   if (af != null) {
+    //     chapterWithContent = Chapter.content(ch.title, af.content!);
+    //   }
+    // }
+
+    if (chapterWithContent.content != null) {
       final fn = ch.item?.href;
       if (fn != null && !fnset.contains(fn)) {
-        ar.addFile(ArchiveFile.string('EPUB/$fn', chapterToHtml(ch)));
+        ar.addFile(
+            ArchiveFile.string('EPUB/$fn', chapterWithContent.content!));
         fnset.add(fn);
       }
     }

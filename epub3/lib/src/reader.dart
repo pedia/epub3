@@ -10,7 +10,7 @@ import 'model.dart';
 /// [Reader] read scheme and content from epub file.
 class Reader extends ContentReader {
   factory Reader.open(Archive archive) {
-    final rootFile = readRootFile(archive);
+    final rootFile = extractRootFileName(archive);
     return Reader(archive, rootFile!);
   }
 
@@ -22,7 +22,6 @@ class Reader extends ContentReader {
   Reader(this.archive, this.rootFile);
 
   static const opfNS = 'http://www.idpf.org/2007/opf';
-  static const container = 'META-INF/container.xml';
 
   Book? read() {
     final scheme = readSchema(rootFile);
@@ -37,9 +36,12 @@ class Reader extends ContentReader {
     return Book(scheme, nav ?? Navigation(chapters: []), this);
   }
 
+  /// Relative path by rootfile
   String pathOf(String fp) => p.join(p.dirname(rootFile), fp);
 
-  /// read META-INF/container.xml extract rootfile
+  static const containerFN = 'META-INF/container.xml';
+
+  /// extract rootfile from META-INF/container.xml
   ///
   /// <?xml version='1.0' encoding='utf-8'?>
   /// <container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">
@@ -47,9 +49,9 @@ class Reader extends ContentReader {
   ///     <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
   ///   </rootfiles>
   /// </container>
-  static String? readRootFile(Archive archive) {
+  static String? extractRootFileName(Archive archive) {
     final af = archive.files
-        .firstWhereOrNull((ArchiveFile file) => file.name == container);
+        .firstWhereOrNull((ArchiveFile file) => file.name == containerFN);
     if (af != null) {
       final doc = xml.XmlDocument.parse(utf8.decode(af.content)).rootElement;
       return _findNodeAttr(doc, '/container/rootfiles/rootfile', 'full-path');
@@ -233,9 +235,11 @@ class Reader extends ContentReader {
       title: clean(e.findAllElements('navLabel').firstOrNull?.innerText ?? ''),
       href: e.findAllElements('content').firstOrNull?.getAttribute('src'),
       children: e.findAllElements('navPoint').map(_readNavPoint).toList(),
+      // TODO: content, #2
     );
   }
 
+  /// path maybe "EPUB/xhtml/epub30-nav.xhtml"
   /// nav / ol / li / span|a
   Navigation? readNavigation3(String path) {
     final doc = _readAsXml(path);
@@ -245,11 +249,10 @@ class Reader extends ContentReader {
       return _readNav2(doc);
     }
 
-    // lot
+    // lot: epub:type="toc" or epub:type="lot"?
     // page-list
     // landmarks
 
-    // TODO: epub:type="toc" or epub:type="lot"?
     final nav = doc.findAllElements('nav').first;
     return Navigation(chapters: _readOl(nav));
   }
@@ -265,10 +268,14 @@ class Reader extends ContentReader {
     final span = li.findElements('span').firstOrNull;
     final a = li.findElements('a').firstOrNull;
 
+    final id = li.getAttribute('id');
+    final href = id == null ? id : a?.getAttribute('href');
+
     return Chapter(
       title: clean(span != null ? span.innerText : a?.innerText ?? ''),
-      href: a?.getAttribute('href'),
+      href: href,
       children: _readOl(li),
+      // TODO: content #2
     );
   }
 
@@ -310,7 +317,7 @@ class Reader extends ContentReader {
   //   return elements.first.innerText;
   // }
 
-  /// Fnd node by xpath, return the attribute's value by name
+  /// Find first node by xpath, return the attribute's value by name
   static String? _findNodeAttr(
       xml.XmlElement node, String xpath, String attrName) {
     final elements = node.xpath(xpath);
@@ -319,14 +326,4 @@ class Reader extends ContentReader {
     }
     return elements.first.getAttribute(attrName);
   }
-
-  /// get child node's attribute value
-  // static String? getNodeAttr(
-  //     xml.XmlElement node, String nodeName, String attrName) {
-  //   final elements = node.findElements(nodeName);
-  //   if (elements.isEmpty) {
-  //     return null;
-  //   }
-  //   return elements.first.getAttribute(attrName);
-  // }
 }
