@@ -55,6 +55,6 @@ refine Book members to:
 - metadata
 - spines
 - manifest
-- navation document
+- navigation document
 
 not impl: Layout redering control, Media overlay documents, mathml3, smil3
