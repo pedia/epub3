@@ -23,7 +23,6 @@ void main(List<String> args) {
     dumpChapter(book, c);
   }
 
-  return
   epub.writeFile(book, 'alice.epub');
 
   final b2 = epub.readFile('alice.epub');
