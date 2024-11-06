@@ -179,25 +179,22 @@ class ItemRef {
   }
 }
 
-class Manifest {
+class Package {
   final Version version;
   final Metadata metadata;
-  final List<Item> items;
+  final Manifest manifest;
   final Spine spine;
-  // TODO: guide
-  Manifest({
-    required this.version,
-    required this.metadata,
-    required this.items,
-    required this.spine,
-  });
+  Package(this.version, this.metadata, this.manifest, this.spine);
+}
 
-  String get identifier => metadata.identifier.first.identifier;
+class Manifest {
+  final List<Item> items;
+  Manifest(this.items);
 
-  String tocFile() {
+  String tocFile(Version version) {
     Item? entry;
     if (version == Version.epub2) {
-      entry = items.where((element) => element.id == spine.toc).firstOrNull;
+      entry = items.where((element) => element.id == 'ncx').firstOrNull;
     } else if (version == Version.epub3) {
       // TODO: this is better?
       // id="nav" first
@@ -215,14 +212,19 @@ class Manifest {
     }
     return p.join('', entry?.href ?? '');
   }
+
+  Item? find(String id) {
+    return items.firstWhere((i) => i.id == id);
+  }
 }
 
 class Chapter {
   final String title;
   final String? href;
   final List<Chapter> children;
+
   /// raw content, always content of html file
-  final String? content; 
+  String? content;
 
   /// TODO: extract text from html document
   String get text => '';
@@ -232,7 +234,7 @@ class Chapter {
         (prev, c) => prev + c.chapterCount,
       );
 
-  const Chapter({
+  Chapter({
     required this.title,
     this.href,
     this.children = const [],
@@ -242,7 +244,10 @@ class Chapter {
   factory Chapter.textContent(String title, String text) {
     final href = title; // TODO:
     return Chapter(
-        title: title, href: href, content: Chapter.toHtml(title, text));
+        title: title,
+        href: href,
+        content: Chapter.toHtml(title, text),
+        children: []);
   }
 
 // transform text to HTML
@@ -326,20 +331,24 @@ abstract class ContentReader {
 }
 
 class Book {
+  final Version version;
   final Manifest manifest;
+  final Metadata metadata;
+  final Spine spine;
   final Navigation navigation;
+
+  /// Read content later
   final ContentReader? reader;
-  Book(this.manifest, this.navigation, this.reader);
+  Book(this.version, this.manifest, this.metadata, this.spine, this.navigation,
+      this.reader);
 
   factory Book.create(
       {required String title, required String author, ContentReader? reader}) {
     return Book(
-      Manifest(
-        version: Version.epub3,
-        metadata: Metadata.create(title, author),
-        items: [],
-        spine: Spine.empty(),
-      ),
+      Version.epub3,
+      Manifest([]),
+      Metadata.create(title, author),
+      Spine.empty(),
       Navigation(title: title, author: author, chapters: []),
       reader,
     );
@@ -350,21 +359,20 @@ class Book {
     manifest.items.addAll(chapter.items);
   }
 
-  Version get version => manifest.version;
+  String get identifier => metadata.identifier.first.identifier;
+
   String get title {
     if (navigation.title != null) {
       return navigation.title!;
     }
-    return manifest.metadata.title.isNotEmpty ? manifest.metadata.title[0] : '';
+    return metadata.title.isNotEmpty ? metadata.title[0] : '';
   }
 
   String get author {
     if (navigation.author != null) {
       return navigation.author!;
     }
-    return manifest.metadata.creator.isNotEmpty
-        ? manifest.metadata.creator[0].creator
-        : '';
+    return metadata.creator.isNotEmpty ? metadata.creator[0].creator : '';
   }
 
   String? get cover =>
@@ -380,7 +388,7 @@ class Book {
   Item? get nav {
     if (version == Version.epub2) {
       return manifest.items
-          .where((element) => element.id == manifest.spine.toc)
+          .where((element) => element.id == spine.toc)
           .firstOrNull;
     } else if (version == Version.epub3) {
       return manifest.items
@@ -390,14 +398,18 @@ class Book {
     return null;
   }
 
-  String? toHref(String id) {
-    return manifest.items.where((i) => i.id == id).firstOrNull?.href;
-  }
-
   String pathOf(String href) {
     final pos = href.indexOf('#');
-    final path = pos == -1 ? href : href.substring(0, pos);
-    return p.join(p.dirname(manifest.tocFile()), path);
+    String path = pos == -1 ? href : href.substring(0, pos);
+
+    // id, not file
+    if (p.extension(path).isEmpty) {
+      final item = manifest.find(path);
+      if (item != null) {
+        path = item.href!;
+      }
+    }
+    return p.join(p.dirname(manifest.tocFile(version)), path);
   }
 
   String? readString(String href) {

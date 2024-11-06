@@ -73,7 +73,7 @@ class Writer {
     final out = xml.XmlBuilder();
     out.processing('xml', 'version="1.0"');
 
-    final uid = manifest.metadata.identifier.first.id;
+    final uid = book.metadata.identifier.first.id;
     out.element(
       'package',
       namespaces: {Reader.opfNS: null},
@@ -86,7 +86,7 @@ class Writer {
             'identifier',
             namespace: dcuri,
             attributes: {'id': uid}, // same id as [1]
-            nest: manifest.metadata.identifier.first.identifier,
+            nest: book.metadata.identifier.first.identifier,
           );
           out.element('title', namespace: dcuri, nest: book.title);
           out.element('language', namespace: dcuri, nest: 'en');
@@ -116,7 +116,7 @@ class Writer {
 
         out.element('spine', // attributes: {'toc': manifest.spine.toc},
             nest: () {
-          for (var i in manifest.spine.refs) {
+          for (var i in book.spine.refs) {
             out.element('itemref', attributes: i.attributes);
           }
           out.element('itemref', attributes: {'idref': 'nav'});

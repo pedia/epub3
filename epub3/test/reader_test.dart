@@ -30,17 +30,7 @@ void main() {
     'test/res/std/linear-algebra.epub',
   ];
 
-  const csharput = [
-    'test/res/53.epub',
-    'test/res/55.epub',
-    'test/res/57.epub',
-    'test/res/invalid-manifest-epub2.epub',
-    'test/res/invalid-manifest-epub3.epub',
-    'test/res/missing-navigation-point.epub',
-    'test/res/missing-toc.epub',
-    'test/res/remote-content.epub',
-    'test/res/xml11.epub',
-  ];
+  
 
   test('epub2', () {
     final r = Reader.open(
@@ -48,26 +38,26 @@ void main() {
     final book = r.read();
     expect(book!.version, Version.epub2);
     expect(
-        book.manifest.metadata.title, equals(['Test title 1', 'Test title 2']));
+        book.metadata.title, equals(['Test title 1', 'Test title 2']));
     expect(
       MetaCreator('John Doe', fileAs: 'Doe, John', role: 'author') ==
           MetaCreator('John Doe', fileAs: 'Doe, John', role: 'author'),
       isTrue,
     );
     expect(
-        book.manifest.metadata.creator,
+        book.metadata.creator,
         equals([
           MetaCreator('John Doe', fileAs: 'Doe, John', role: 'author'),
           MetaCreator('Jane Doe', fileAs: 'Doe, Jane', role: 'author'),
         ]));
     expect(
-        book.manifest.metadata.contributor,
+        book.metadata.contributor,
         equals([
           MetaCreator('John Editor', fileAs: 'Editor, John', role: 'editor'),
           MetaCreator('Jane Editor', fileAs: 'Editor, Jane', role: 'editor'),
         ]));
     expect(
-        book.manifest.metadata.identifier,
+        book.metadata.identifier,
         equals([
           MetaIdentifier(
             identifier: 'https://example.com/books/123',
@@ -80,15 +70,15 @@ void main() {
             scheme: 'ISBN',
           ),
         ]));
-    expect(book.manifest.metadata.subject,
+    expect(book.metadata.subject,
         equals(['Test subject 1', 'Test subject 2']));
-    expect(book.manifest.metadata.publisher,
+    expect(book.metadata.publisher,
         equals(['Test publisher 1', 'Test publisher 2']));
-    expect(book.manifest.metadata.description, equals(['Test description']));
-    expect(book.manifest.metadata.type, equals(['dictionary', 'preview']));
-    expect(book.manifest.metadata.format, equals(['format-1', 'format-2']));
+    expect(book.metadata.description, equals(['Test description']));
+    expect(book.metadata.type, equals(['dictionary', 'preview']));
+    expect(book.metadata.format, equals(['format-1', 'format-2']));
     expect(
-        book.manifest.metadata.source,
+        book.metadata.source,
         equals([
           'https://example.com/books/123/content-1.html',
           'https://example.com/books/123/content-2.html',
@@ -128,25 +118,25 @@ void main() {
     final book = readFile('test/res/epub3.epub');
     expect(book!.version, Version.epub3);
     expect(
-        book.manifest.metadata.title, equals(['Test title 1', 'Test title 2']));
+        book.metadata.title, equals(['Test title 1', 'Test title 2']));
     expect(
       MetaCreator('John Doe', fileAs: 'Doe, John', role: 'author'),
       MetaCreator('John Doe', fileAs: 'Doe, John', role: 'author'),
     );
     expect(
-        book.manifest.metadata.creator,
+        book.metadata.creator,
         equals([
           MetaCreator('John Doe', fileAs: 'Doe, John', role: 'author'),
           MetaCreator('Jane Doe', fileAs: 'Doe, Jane', role: 'author'),
         ]));
     expect(
-        book.manifest.metadata.contributor,
+        book.metadata.contributor,
         equals([
           MetaCreator('John Editor', fileAs: 'Editor, John', role: 'editor'),
           MetaCreator('Jane Editor', fileAs: 'Editor, Jane', role: 'editor'),
         ]));
     expect(
-        book.manifest.metadata.identifier,
+        book.metadata.identifier,
         equals([
           MetaIdentifier(
             identifier: 'https://example.com/books/123',
@@ -159,15 +149,15 @@ void main() {
             scheme: 'ISBN',
           ),
         ]));
-    expect(book.manifest.metadata.subject,
+    expect(book.metadata.subject,
         equals(['Test subject 1', 'Test subject 2']));
-    expect(book.manifest.metadata.publisher,
+    expect(book.metadata.publisher,
         equals(['Test publisher 1', 'Test publisher 2']));
-    expect(book.manifest.metadata.description, equals(['Test description']));
-    expect(book.manifest.metadata.type, equals(['dictionary', 'preview']));
-    expect(book.manifest.metadata.format, equals(['format-1', 'format-2']));
+    expect(book.metadata.description, equals(['Test description']));
+    expect(book.metadata.type, equals(['dictionary', 'preview']));
+    expect(book.metadata.format, equals(['format-1', 'format-2']));
     expect(
-        book.manifest.metadata.source,
+        book.metadata.source,
         equals([
           'https://example.com/books/123/content-1.html',
           'https://example.com/books/123/content-2.html',
@@ -185,12 +175,12 @@ void main() {
 
     expect(book.navigation.chapterCount, 5);
     expect(
-        book.navigation.chapters[0],
+        book.chapters[0],
         equals(Chapter(title: 'Test span header 1', children: [
           Chapter(title: 'Chapter 1', href: 'chapter1.html', children: []),
         ])));
     expect(
-        book.navigation.chapters[1],
+        book.chapters[1],
         equals(Chapter(title: 'Test span header 2', children: [
           Chapter(title: 'Chapter 2', href: 'chapter2.html', children: []),
           Chapter(title: 'Chapter 3', href: 'chapter3.html', children: []),
@@ -227,7 +217,7 @@ void main() {
       readit(Chapter c) {
         if (c.href != null) {
           final af = book.readBytes(c.href!);
-          expect(af, isNotNull);
+          expect(af, isNotNull, reason: '$f ${c.href} "${c.title}"');
         }
         for (var cc in c.children) {
           readit(cc);
@@ -239,6 +229,18 @@ void main() {
       }
     }
   });
+
+  const csharput = [
+    'test/res/53.epub',
+    'test/res/55.epub',
+    'test/res/57.epub',
+    'test/res/invalid-manifest-epub2.epub',
+    'test/res/invalid-manifest-epub3.epub',
+    'test/res/missing-navigation-point.epub',
+    'test/res/missing-toc.epub',
+    'test/res/remote-content.epub',
+    'test/res/xml11.epub',
+  ];
 
   test('malformed', () {
     csharput.forEach((f) {

@@ -7,7 +7,7 @@ import 'package:xml/xpath.dart' as xml;
 
 import 'model.dart';
 
-/// [Reader] read scheme and content from epub file.
+/// [Reader] read `package document` and content from zip file.
 class Reader extends ContentReader {
   factory Reader.open(Archive archive) {
     final rootFile = extractRootFileName(archive);
@@ -23,21 +23,31 @@ class Reader extends ContentReader {
 
   static const opfNS = 'http://www.idpf.org/2007/opf';
 
-  Book? read() {
-    final scheme = readSchema(rootFile);
-    if (scheme == null) {
+  Book? read({bool extractContent = false}) {
+    final package = parsePackage(rootFile);
+    if (package == null) {
       return null;
     }
 
-    final navfile = pathOf(scheme.tocFile());
-    final nav = scheme.version == Version.epub2
+    final navfile = package.manifest.tocFile(package.version);
+    final nav = package.version == Version.epub2
         ? readNavigation2(navfile)
         : readNavigation3(navfile);
-    return Book(scheme, nav ?? Navigation(chapters: []), this);
+    final book = Book(package.version, package.manifest, package.metadata,
+        package.spine, nav ?? Navigation(chapters: []), this);
+
+    if (extractContent) {
+      book.chapters.forEach((ch) => _loadContent(book, ch));
+    }
+    return book;
   }
 
-  /// Relative path by rootfile
-  String pathOf(String fp) => p.join(p.dirname(rootFile), fp);
+  void _loadContent(Book book, Chapter ch) {
+    ch.content = book.readString(ch.href!);
+    for (Chapter sub in ch.children) {
+      _loadContent(book, sub);
+    }
+  }
 
   static const containerFN = 'META-INF/container.xml';
 
@@ -59,8 +69,8 @@ class Reader extends ContentReader {
     return null;
   }
 
-  /// Read [Manifest] from OEBPS/content.opf
-  Manifest? readSchema(String path) {
+  /// Parse Package document normal as OEBPS/content.opf
+  Package? parsePackage(String path) {
     // root element, <package>
     var doc = _readAsXml(path);
     if (doc == null) return null;
@@ -76,13 +86,13 @@ class Reader extends ContentReader {
       throw Exception('Unsupported EPUB version: $vs.');
     }
 
-    return Manifest(
-      version: version,
-      metadata: _extractMetadata(
+    return Package(
+      version,
+      _extractMetadata(
           doc.findElements('metadata', namespace: opfNS).first, version),
-      items: _extractManifest(
-          doc.findElements('manifest', namespace: opfNS).first),
-      spine: _extractSpine(doc.findElements('spine', namespace: opfNS).first),
+      Manifest(_extractManifest(
+          doc.findElements('manifest', namespace: opfNS).first)),
+      _extractSpine(doc.findElements('spine', namespace: opfNS).first),
     );
   }
 
@@ -212,7 +222,7 @@ class Reader extends ContentReader {
       .toList();
 
   Navigation? readNavigation2(String path) {
-    final doc = _readAsXml(path);
+    final doc = _readAsXml(pathOf(path));
     if (doc == null) return null;
 
     return _readNav2(doc);
@@ -242,7 +252,7 @@ class Reader extends ContentReader {
   /// path maybe "EPUB/xhtml/epub30-nav.xhtml"
   /// nav / ol / li / span|a
   Navigation? readNavigation3(String path) {
-    final doc = _readAsXml(path);
+    final doc = _readAsXml(pathOf(path));
     if (doc == null) return null;
 
     if (doc.localName == 'ncx') {
@@ -269,15 +279,17 @@ class Reader extends ContentReader {
     final a = li.findElements('a').firstOrNull;
 
     final id = li.getAttribute('id');
-    final href = id == null ? id : a?.getAttribute('href');
+    final href = id != null ? id : a?.getAttribute('href');
 
     return Chapter(
       title: clean(span != null ? span.innerText : a?.innerText ?? ''),
       href: href,
       children: _readOl(li),
-      // TODO: content #2
     );
   }
+
+  /// Relative path by rootfile
+  String pathOf(String fp) => p.join(p.dirname(rootFile), fp);
 
   /// Read an [ArchiveFile]
   ArchiveFile? readFile(String path) {
@@ -285,7 +297,7 @@ class Reader extends ContentReader {
 
     // pathOf for relative path
     // normalize for avoid ./
-    path = p.normalize(pathOf(path));
+    path = pathOf(p.normalize(path));
 
     return archive.files
         .firstWhereOrNull((ArchiveFile file) => file.name == path);

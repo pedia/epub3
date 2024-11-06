@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:archive/archive_io.dart';
 import 'package:epub3/epub3_io.dart';
 import 'package:test/test.dart';
 import 'package:archive/archive.dart';
@@ -50,5 +52,27 @@ void main() {
         // expect(book2.chapters[i].children, equals(book.chapters[i].children));
       }
     }
+  });
+
+  test('content with children', () {
+    final book1 = Book.create(title: 'title', author: 'author');
+    book1.add(Chapter(title: 'c1', content: 'c1-body', children: [
+      Chapter(title: 'c11', content: 'c11-body'),
+      Chapter(title: 'c12', content: 'c12-body'),
+    ]));
+    book1.add(Chapter(title: 'c2', content: 'c2-body', children: [
+      Chapter(title: 'c21', content: 'c21-body', children: [
+        Chapter(title: 'c211', content: 'c211-body'),
+      ]),
+      Chapter(title: 'c22', content: 'c22-body'),
+    ]));
+
+    final a = Archive();
+    Writer(book1).write(a);
+    File('foo.epub')..createSync()..writeAsBytesSync(ZipEncoder().encode(a)!);
+
+    final book2 = Reader.open(a).read(extractContent: true);
+    expect(book2?.chapters.length, 2);
+    expect(book2?.chapters.first.content, 'c1-body');
   });
 }
