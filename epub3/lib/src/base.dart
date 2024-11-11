@@ -8,7 +8,7 @@ extension DTE on DateTime {
     String h = _twoDigits(hour);
     String min = _twoDigits(minute);
     String sec = _twoDigits(second);
-    
+
     if (isUtc) {
       return "$y-$m-${d}T$h:$min:${sec}Z";
     } else {
@@ -37,4 +37,8 @@ extension DTE on DateTime {
     if (absN >= 100000) return "$sign$absN";
     return "${sign}0$absN";
   }
+}
+
+String pjoin(String a1, String a2) {
+  return a1 + '/' + a2;
 }
