@@ -70,25 +70,20 @@ List<epub.Chapter> split(File file) {
   // Build tree liked chapters
   final res = <epub.Chapter>[];
   final toplevel = stack.first.level;
-  int? prevlevel;
   for (final lt in stack) {
     if (lt.level == toplevel) {
       // new top Chapter
       res.add(lt.chapter);
     } else {
       // Find and push
-      if (prevlevel != null) {
-        int i = prevlevel;
-        var c = res;
-        if (i > lt.level) {
-          c = c.last.children;
-          i -= 1;
-        }
-        c.add(lt.chapter);
+      int i = stack.last.level;
+      var c = res;
+      while (i != lt.level) {
+        c = c.last.children;
+        i -= 1;
       }
+      c.add(lt.chapter);
     }
-
-    prevlevel = lt.level;
   }
 
   return res;
@@ -98,9 +93,9 @@ List<epub.Chapter> split(File file) {
 void main(List<String> args) {
   final fp = args[0];
   final chs = split(File(fp));
-  final book = epub.Book.create(title: p.basename(fp), author: '');
+  final book = epub.Book.create(title: p.basenameWithoutExtension(fp), author: '');
   for (final ch in chs) {
     book.add(ch);
   }
-  epub.writeFile(book, p.basename(fp) + '.epub');
+  epub.writeFile(book, p.basenameWithoutExtension(fp) + '.epub');
 }
