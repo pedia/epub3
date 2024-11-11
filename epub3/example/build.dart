@@ -18,12 +18,12 @@ void main(List<String> args) {
 
   book.add(
     epub.Chapter(title: 'Part 1', children: [
-      epub.Chapter.content('Chapter 1', 'Chapter 1 content'),
-      epub.Chapter.content('Chapter 2', 'Chapter 2 content'),
+      epub.Chapter.textContent('Chapter 1', 'Chapter 1 content'),
+      epub.Chapter.textContent('Chapter 2', 'Chapter 2 content'),
     ]),
   );
 
-  for (var c in book.navigation.chapters) {
+  for (var c in book.chapters) {
     dumpChapter(c);
   }
 

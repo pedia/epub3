@@ -1,10 +1,10 @@
 name: epub3
-description: Epub3 file Read and Write.
+description: Read and Write Epub3 files.
 homepage: https://github.com/pedia/epub3
-version: 0.2.2
+version: 0.3.0
 
 environment:
-  sdk: '>=2.14.0 <4.0.0'
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   archive: ^3.2.2

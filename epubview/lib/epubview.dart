@@ -12,6 +12,7 @@ class Calculator {
   int addOne(int value) => value + 1;
 }
 
+/// none-tree-liked Chapter
 class Chapter {
   Chapter({required this.title, this.href, this.parent});
   final String title;
@@ -40,25 +41,24 @@ class Chapter {
   }
 }
 
-class ChapterView extends StatelessWidget {
+class ReaderState extends ChangeNotifier {
+  final epub.Book book;
   final List<Chapter> chapters;
-  final String? href;
-  final void Function(Chapter)? onChapterSelect;
-  const ChapterView({
-    required this.chapters,
-    this.href,
-    this.onChapterSelect,
-    super.key,
-  });
+  Chapter? chapter;
 
-  factory ChapterView.from(
-    epub.Book book, {
-    void Function(Chapter)? onChapterSelect,
-  }) =>
-      ChapterView(
-        chapters: Chapter.build(book),
-        onChapterSelect: onChapterSelect,
-      );
+  ReaderState(this.book) : chapters = Chapter.build(book);
+
+  void setCurrent(Chapter ch) {
+    chapter = ch;
+    notifyListeners();
+  }
+}
+
+class ChapterView extends StatelessWidget {
+  final ReaderState rs;
+  const ChapterView(this.rs, {super.key});
+
+  factory ChapterView.from(epub.Book book) => ChapterView(ReaderState(book));
 
   @override
   Widget build(BuildContext context) {
@@ -67,17 +67,18 @@ class ChapterView extends StatelessWidget {
         // print(
         //     'tile font: ${Theme.of(context).textTheme.bodyMedium?.fontFamily} '
         //     '${Theme.of(context).textTheme.bodyMedium?.fontFamilyFallback}');
-        final ch = chapters[index];
+        final ch = rs.chapters[index];
         return ListTile(
           leading: ch.parent == null ? null : const Text(''),
           title: Text(ch.title),
+          selected: rs.chapter == ch,
           onTap: () {
-            onChapterSelect?.call(ch);
+            rs.setCurrent(ch);
             print('click ${ch.href}');
           },
         );
       },
-      itemCount: chapters.length,
+      itemCount: rs.chapters.length,
     );
   }
 }

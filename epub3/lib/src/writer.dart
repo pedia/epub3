@@ -1,10 +1,11 @@
 import 'dart:convert';
 
 import 'package:archive/archive.dart';
+import 'package:collection/collection.dart';
 import 'package:xml/xml.dart' as xml;
 
 import 'base.dart';
-import 'model.dart';
+import '../model.dart';
 import 'reader.dart';
 
 ///
@@ -27,16 +28,26 @@ class Writer {
   void write(Archive a) {
     a.addFile(ArchiveFile.noCompress(
         'mimetype', 20, utf8.encode('application/epub+zip')));
-    a.addFile(ArchiveFile.string(Reader.container, container));
 
-    a.addFile(xmlFile(
-      'EPUB/package.opf',
-      buildManifest(book.manifest),
-    ));
-    a.addFile(xmlFile(
-      'EPUB/nav.xhtml',
-      buildNavigation(book.navigation),
-    ));
+    // META-INF/container.xml
+    a.addFile(ArchiveFile.string(Reader.containerFN, container));
+
+    // legacy epub2:
+    // <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml" />
+    // epub3, navigation document
+    var nav = book.manifest.firstWhereOrNull((i) => i.properties == 'nav');
+    if (nav == null) {
+      // add our ManifestItem
+      nav = ManifestItem(
+        id: 'nav',
+        href: 'nav.xhtml',
+        mediaType: 'application/xhtml+xml',
+      );
+      book.manifest.add(nav);
+    }
+
+    a.addFile(xmlFile('EPUB/package.opf', buildPackage(book.manifest)));
+    a.addFile(xmlFile('EPUB/' + nav.href!, buildNavigation(book.chapters)));
 
     // manifest to archive?
     // chapters to archive?
@@ -46,11 +57,12 @@ class Writer {
     }
   }
 
-  writeChapter(Archive ar, Chapter ch, Set<String> fnset) {
+  void writeChapter(Archive ar, Chapter ch, Set<String> fnset) {
     if (ch.content != null) {
       final fn = ch.item?.href;
       if (fn != null && !fnset.contains(fn)) {
-        ar.addFile(ArchiveFile.string('EPUB/$fn', chapterToHtml(ch)));
+        ar.addFile(ArchiveFile.string('EPUB/$fn', ch.content!));
+
         fnset.add(fn);
       }
     }
@@ -60,11 +72,11 @@ class Writer {
     }
   }
 
-  xml.XmlBuilder buildManifest(Manifest manifest) {
+  xml.XmlBuilder buildPackage(List<ManifestItem> manifest) {
     final out = xml.XmlBuilder();
     out.processing('xml', 'version="1.0"');
 
-    final uid = manifest.metadata.identifier.first.id;
+    final uid = book.metadata.get('identifier') ?? '';
     out.element(
       'package',
       namespaces: {Reader.opfNS: null},
@@ -77,7 +89,7 @@ class Writer {
             'identifier',
             namespace: dcuri,
             attributes: {'id': uid}, // same id as [1]
-            nest: manifest.metadata.identifier.first.identifier,
+            // nest: book.metadata.identifier.first.identifier,
           );
           out.element('title', namespace: dcuri, nest: book.title);
           out.element('language', namespace: dcuri, nest: 'en');
@@ -100,20 +112,19 @@ class Writer {
             'properties': 'nav',
           });
 
-          for (var i in manifest.items) {
+          for (var i in manifest) {
             out.element('item', attributes: i.attributes);
           }
         });
 
-        out.element('spine', // attributes: {'toc': manifest.spine.toc},
-            nest: () {
-          for (var i in manifest.spine.refs) {
+        out.element('spine', attributes: {'toc': 'ncx'}, nest: () {
+          for (var i in book.spine) {
             out.element('itemref', attributes: i.attributes);
           }
           out.element('itemref', attributes: {'idref': 'nav'});
 
           for (var ch in book.chapters) {
-            buildShpineItem(out, ch);
+            buildSpineItem(out, ch);
           }
         });
       },
@@ -121,18 +132,18 @@ class Writer {
     return out;
   }
 
-  void buildShpineItem(xml.XmlBuilder out, Chapter ch) {
+  void buildSpineItem(xml.XmlBuilder out, Chapter ch) {
     final i = ch.item;
     if (i != null) {
       out.element('itemref', attributes: {'idref': i.id});
     }
 
     for (var c in ch.children) {
-      buildShpineItem(out, c);
+      buildSpineItem(out, c);
     }
   }
 
-  xml.XmlBuilder buildNavigation(Navigation nav) {
+  xml.XmlBuilder buildNavigation(List<Chapter> chapters) {
     final out = xml.XmlBuilder();
     out.processing('xml', 'version="1.0"');
     out.element('html', namespaces: {
@@ -155,7 +166,7 @@ class Writer {
 
           // outside ol
           out.element('ol', nest: () {
-            for (var c in nav.chapters) {
+            for (var c in chapters) {
               buildChapter(out, c);
             }
           });
@@ -167,16 +178,11 @@ class Writer {
   }
 
   void buildChapter(xml.XmlBuilder out, Chapter chapter) {
-    // TODO: <li id="?">
     out.element('li', nest: () {
-      final i = chapter.item;
-      if (i == null) {
-        out.element('span', nest: chapter.title);
-      } else {
-        out.element('a', attributes: {'href': i.href!}, nest: () {
-          out.text(chapter.title);
-        });
-      }
+      out.element('a', attributes: {'href': chapter.href ?? chapter.genhref()},
+          nest: () {
+        out.text(chapter.title);
+      });
 
       if (chapter.children.isNotEmpty) {
         out.element('ol', nest: () {
@@ -201,19 +207,19 @@ class Writer {
    </rootfiles>
 </container>''';
 
-  static String chapterToHtml(Chapter ch) {
-    final content =
-        ch.content?.split('\n').map((line) => '<p>$line</p>').join('\n');
+//   static String chapterToHtml(Chapter ch) {
+//     final content =
+//         ch.content?.split('\n').map((line) => '<p>$line</p>').join('\n');
 
-    return '''<?xml version="1.0" encoding="utf-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-<meta charset="utf-8"/>
-<title>${ch.title}</title></head>
-<body>
-$content
-</body>
-</html>
-''';
-  }
+//     return '''<?xml version="1.0" encoding="utf-8"?>
+// <html xmlns="http://www.w3.org/1999/xhtml">
+// <head>
+// <meta charset="utf-8"/>
+// <title>${HtmlEscape().convert(ch.title)}</title></head>
+// <body>
+// $content
+// </body>
+// </html>
+// ''';
+//   }
 }

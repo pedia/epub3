@@ -12,7 +12,7 @@ import 'package:epub3/epub3_io.dart' as epub;
 
 final book = epub.readFile('test/res/alice.epub')!;
 print(book.version);  // Version.epub3
-print(book.title);    // Alice's Adventures...
+print(book.title);    // Alice's Adventures.
 print(book.author);   // Lewis Carroll
 print(book.chapters); // first level chapters
 ```
@@ -42,10 +42,19 @@ final book = epub.Book.create(
 
 book.add(
   epub.Chapter(title: 'Part 1', children: [
-    epub.Chapter.content('Chapter 1', 'Content of Chapter 1'),
-    epub.Chapter.content('Chapter 2', 'Content of Chapter 2'),
+    epub.Chapter.content('Chapter 1', '<p>Content of Chapter 1</p>'),
+    epub.Chapter.content('Chapter 2', '<p>Content of Chapter 2</p>'),
   ]),
 );
 
 epub.writeFile(book, 'new.epub');
 ```
+
+## TODO:
+refine Book members to:
+- metadata
+- spines
+- manifest
+- navigation document
+
+not impl: Layout redering control, Media overlay documents, mathml3, smil3
