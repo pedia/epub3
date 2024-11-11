@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:xml/xml.dart' as xml;
 import 'package:xml/xpath.dart' as xml;
 
+import 'base.dart';
 import '../model.dart';
 
 class Reader implements ContentReader {
@@ -174,7 +175,7 @@ class Reader implements ContentReader {
     if (nav == null) {
       return [];
     }
-    final navfp = p.join(opfroot, nav.href);
+    final navfp = pjoin(opfroot, nav.href!);
     navfolder = p.dirname(navfp);
 
     final navdoc = _readAsXml(navfp);
@@ -203,7 +204,7 @@ class Reader implements ContentReader {
     if (nav == null) {
       return [];
     }
-    final navfp = p.join(opfroot, nav.href);
+    final navfp = pjoin(opfroot, nav.href!);
     navfolder = p.dirname(navfp);
 
     final navdoc = _readAsXml(navfp);
@@ -252,12 +253,12 @@ class Reader implements ContentReader {
 
   Uint8List? extractFile(String path) {
     // most time, relative to nax
-    String fp = p.join(navfolder, path);
+    String fp = pjoin(navfolder, path);
     var af =
         archive.files.firstWhereOrNull((ArchiveFile file) => file.name == fp);
     if (af == null) {
       // some time it's relative to opfroot, it a `ManifestItem.href`
-      fp = p.join(opfroot, path);
+      fp = pjoin(opfroot, path);
       af =
           archive.files.firstWhereOrNull((ArchiveFile file) => file.name == fp);
     }
