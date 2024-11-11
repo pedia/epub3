@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:path/path.dart' as p;
 import 'package:archive/archive_io.dart';
 import 'package:epub3/epub3_io.dart';
 import 'package:test/test.dart';
@@ -34,15 +35,24 @@ void main() {
 
   test('epub3', () {
     for (var f in fs) {
-      final book = readFile(f);
-      expect(book, isNotNull);
+      final book = readFile(f)!;
 
-      final w = Writer(book!);
+      book.manifest.clear();
+      book.spine.clear();
+      for (var ch in book.chapters) {
+        book.manifest.addAll(ch.items);
+      }
+
       final a = Archive();
-      w.write(a);
+      Writer(book).write(a);
+
+      if (Directory('out').existsSync()) {
+        final nfn = p.join('out', p.basename(f));
+        writeFile(book, nfn);
+      }
 
       // read again
-      final book2 = Reader.open(a).read()!;
+      final book2 = Reader(a).parse(extractContent: true)!;
       // expect(book2!.author, book.author);
       expect(book2.title, book.title);
       expect(book2.chapters.length, equals(book.chapters.length));
@@ -69,9 +79,11 @@ void main() {
 
     final a = Archive();
     Writer(book1).write(a);
-    File('foo.epub')..createSync()..writeAsBytesSync(ZipEncoder().encode(a)!);
+    File('foo.epub')
+      ..createSync()
+      ..writeAsBytesSync(ZipEncoder().encode(a)!);
 
-    final book2 = Reader.open(a).read(extractContent: true);
+    final book2 = Reader(a).parse(extractContent: true);
     expect(book2?.chapters.length, 2);
     expect(book2?.chapters.first.content, 'c1-body');
   });

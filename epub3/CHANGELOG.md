@@ -1,3 +1,6 @@
+# 0.3.0
+refine Book
+
 # 0.2.2
 Fix utf8 decode in Book.readString
 

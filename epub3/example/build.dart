@@ -23,7 +23,7 @@ void main(List<String> args) {
     ]),
   );
 
-  for (var c in book.navigation.chapters) {
+  for (var c in book.chapters) {
     dumpChapter(c);
   }
 

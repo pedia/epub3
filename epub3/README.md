@@ -42,8 +42,8 @@ final book = epub.Book.create(
 
 book.add(
   epub.Chapter(title: 'Part 1', children: [
-    epub.Chapter.content('Chapter 1', 'Content of Chapter 1'),
-    epub.Chapter.content('Chapter 2', 'Content of Chapter 2'),
+    epub.Chapter.content('Chapter 1', '<p>Content of Chapter 1</p>'),
+    epub.Chapter.content('Chapter 2', '<p>Content of Chapter 2</p>'),
   ]),
 );
 

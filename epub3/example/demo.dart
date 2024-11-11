@@ -19,14 +19,14 @@ void dumpChapter(epub.Book b, epub.Chapter c, {int depth = 1}) {
 void main(List<String> args) {
   final book =
       epub.readFile(args.isEmpty ? 'test/res/std/epub30-spec.epub' : args[0]);
-  for (var c in book!.navigation.chapters) {
+  for (var c in book!.chapters) {
     dumpChapter(book, c);
   }
 
   epub.writeFile(book, 'alice.epub');
 
   final b2 = epub.readFile('alice.epub');
-  for (var c in b2!.navigation.chapters) {
+  for (var c in b2!.chapters) {
     dumpChapter(b2, c);
   }
 }
