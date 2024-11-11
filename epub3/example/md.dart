@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:path/path.dart' as p;
 
 import 'package:epub3/epub3_io.dart' as epub;
 
@@ -37,55 +38,57 @@ class LeveledTitle {
 }
 
 List<epub.Chapter> split(File file) {
-  final res = <epub.Chapter>[];
+  final stack = <LeveledTitle>[];
+  final body = <String>[]; // current Chapter's body in text(not html)
 
   final lines = file.readAsLinesSync();
-
-  LeveledTitle? top;
-
-  final body = <String>[]; // current Chapter's body
-
   for (String line in lines) {
     if (line.startsWith('#')) {
+      // End previous chapter: set content
       if (body.isNotEmpty) {
-        // find tail
-        var tail = top?.chapter;
-        while (true) {
-          if (tail?.children.last != null) {
-            tail = tail?.children.last;
-          } else {
-            break;
-          }
-        }
-
-        // tail.chapter =
-        //     epub.Chapter.textContent(current.chapter.title, body.join('\n'));
+        stack.last.chapter =
+            epub.Chapter.textContent(stack.last.chapter.title, body.join('\n'));
 
         body.clear();
       }
 
+      // new Title
       final current = LeveledTitle.from(line);
-      // first new chapter
-      if (top == null) {
-        top = current;
-        continue;
-      }
-
-      if (current.level < top.level) {
-        // sub chapter
-        top.chapter.children.add(current.chapter);
-      } else {
-        // an other top level chapter
-        res.add(current.chapter);
-        top = current;
-      }
+      stack.add(current);
     } else {
       body.add(line.trim());
     }
   }
 
-  if (top != null) {
-    res.add(top.chapter);
+  if (body.isNotEmpty) {
+    stack.last.chapter =
+        epub.Chapter.textContent(stack.last.chapter.title, body.join('\n'));
+
+    body.clear();
+  }
+
+  // Build tree liked chapters
+  final res = <epub.Chapter>[];
+  final toplevel = stack.first.level;
+  int? prevlevel;
+  for (final lt in stack) {
+    if (lt.level == toplevel) {
+      // new top Chapter
+      res.add(lt.chapter);
+    } else {
+      // Find and push
+      if (prevlevel != null) {
+        int i = prevlevel;
+        var c = res;
+        if (i > lt.level) {
+          c = c.last.children;
+          i -= 1;
+        }
+        c.add(lt.chapter);
+      }
+    }
+
+    prevlevel = lt.level;
   }
 
   return res;
@@ -93,11 +96,11 @@ List<epub.Chapter> split(File file) {
 
 // Convert markdown to epub
 void main(List<String> args) {
-  final fp = '/Users/mord/t/Political-Science/国家为什么会失败——权力、富裕与贫困的根源.md';
+  final fp = args[0];
   final chs = split(File(fp));
-  final book = epub.Book.create(title: '国家为什么会失败', author: '');
+  final book = epub.Book.create(title: p.basename(fp), author: '');
   for (final ch in chs) {
     book.add(ch);
   }
-  epub.writeFile(book, "国家为什么会失败.epub");
+  epub.writeFile(book, p.basename(fp) + '.epub');
 }

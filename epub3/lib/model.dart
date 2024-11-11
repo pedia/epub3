@@ -94,7 +94,7 @@ $body
   /// Generate href for this Chapter
   /// maybe chapter index is right?
   String genhref() {
-    return Object.hash(title, content).toRadixString(16) + '.html';
+    return Object.hash(title, content).toRadixString(16) + '.xhtml';
   }
 
   @override
